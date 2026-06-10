@@ -52,6 +52,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { useClients } from '@/hooks/useClients';
 import { useDatepicker } from '@/hooks/useDatepicker';
 import type { ClientRecord, InboundOption } from '@/hooks/useClients';
+import { useNodesQuery } from '@/api/queries/useNodesQuery';
 import AppSidebar from '@/layouts/AppSidebar';
 import { IntlUtil, SizeFormatter } from '@/utils';
 import { setMessageInstance } from '@/utils/messageBus';
@@ -146,6 +147,7 @@ function readFilterState(): PersistedFilterState {
         buckets: Array.isArray(fromRaw.buckets) ? fromRaw.buckets : [],
         protocols: Array.isArray(fromRaw.protocols) ? fromRaw.protocols : [],
         inboundIds: Array.isArray(fromRaw.inboundIds) ? fromRaw.inboundIds : [],
+        nodes: Array.isArray(fromRaw.nodes) ? fromRaw.nodes : [],
         groups: Array.isArray(fromRaw.groups) ? fromRaw.groups : [],
       },
       sort: typeof raw.sort === 'string' ? raw.sort : '',
@@ -201,6 +203,8 @@ export default function ClientsPage() {
     refresh,
     hydrate,
   } = useClients();
+
+  const { nodes: allNodes } = useNodesQuery();
 
   useWebSocket({
     traffic: applyTrafficEvent,
@@ -261,6 +265,7 @@ export default function ClientsPage() {
       filter: filters.buckets.join(','),
       protocol: filters.protocols.join(','),
       inbound: filters.inboundIds.join(','),
+      node: filters.nodes.join(',') || undefined,
       expiryFrom: filters.expiryFrom,
       expiryTo: filters.expiryTo,
       usageFrom: gbToBytes(filters.usageFromGB),
@@ -303,6 +308,17 @@ export default function ClientsPage() {
   function inboundLabel(id: number) {
     const ib = inboundsById[id];
     return ib?.remark?.trim() || ib?.tag || '';
+  }
+
+  const nodesById = useMemo(() => {
+    const out: Record<number, { name?: string; remark?: string }> = {};
+    for (const n of allNodes) out[n.id] = n;
+    return out;
+  }, [allNodes]);
+
+  function nodeLabel(id: number) {
+    const n = nodesById[id];
+    return n?.name || n?.remark || `Node ${id}`;
   }
 
   const clientBucket = useCallback((row: ClientRecord | null | undefined): Bucket | null => {
@@ -1029,6 +1045,16 @@ export default function ClientsPage() {
                               {inboundLabel(id)}
                             </Tag>
                           ))}
+                          {filters.nodes.map((id) => (
+                            <Tag
+                              key={`n-${id}`}
+                              closable
+                              color="magenta"
+                              onClose={() => setFilters({ ...filters, nodes: filters.nodes.filter((x) => x !== id) })}
+                            >
+                              {t('pages.clients.node')}: {nodeLabel(id)}
+                            </Tag>
+                          ))}
                           {filters.groups.map((g) => (
                             <Tag
                               key={`g-${g}`}
@@ -1323,6 +1349,7 @@ export default function ClientsPage() {
             inbounds={inbounds}
             protocols={protocolOptions}
             groups={groupOptions}
+            nodes={allNodes}
           />
         </LazyMount>
       </Layout>

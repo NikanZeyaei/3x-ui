@@ -28,6 +28,7 @@ interface FilterDrawerProps {
   inbounds: InboundOption[];
   protocols: string[];
   groups: string[];
+  nodes: { id: number; name?: string; remark?: string }[];
 }
 
 const BUCKET_KEYS = ['active', 'expiring', 'depleted', 'deactive', 'online'] as const;
@@ -40,6 +41,7 @@ export default function FilterDrawer({
   inbounds,
   protocols,
   groups,
+  nodes,
 }: FilterDrawerProps) {
   const { t } = useTranslation();
 
@@ -63,6 +65,14 @@ export default function FilterDrawer({
   const groupOptions = useMemo(
     () => groups.map((g) => ({ value: g, label: g })),
     [groups],
+  );
+
+  const nodeOptions = useMemo(
+    () => nodes.map((n) => ({
+      value: n.id,
+      label: n.name || n.remark || `Node ${n.id}`,
+    })),
+    [nodes],
   );
 
   const dateRange: [Dayjs | null, Dayjs | null] = [
@@ -130,6 +140,23 @@ export default function FilterDrawer({
             listHeight={220}
           />
         </Form.Item>
+
+        {nodeOptions.length > 0 && (
+          <Form.Item label={t('pages.clients.nodes')}>
+            <Select
+              mode="multiple"
+              value={filters.nodes}
+              onChange={(v) => patch('nodes', v as number[])}
+              options={nodeOptions}
+              placeholder={t('pages.clients.selectNodes')}
+              maxTagCount="responsive"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              listHeight={220}
+            />
+          </Form.Item>
+        )}
 
         <Form.Item label={t('pages.clients.group')}>
           <Select
