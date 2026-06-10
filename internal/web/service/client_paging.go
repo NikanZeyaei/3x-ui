@@ -44,6 +44,7 @@ type ClientPageParams struct {
 	Filter   string `form:"filter"`
 	Protocol string `form:"protocol"`
 	Inbound  string `form:"inbound"`
+	Node     string `form:"node"`
 	Sort     string `form:"sort"`
 	Order    string `form:"order"`
 
@@ -116,15 +117,25 @@ func (s *ClientService) ListPaged(inboundSvc *InboundService, settingSvc *Settin
 
 	protocols := parseCSVStrings(params.Protocol)
 	inboundIDs := parseCSVInts(params.Inbound)
+	nodeIDs := parseCSVInts(params.Node)
 	buckets := parseCSVStrings(params.Filter)
 
 	var protocolByInbound map[int]string
-	if len(protocols) > 0 {
-		inbounds, err := inboundSvc.GetAllInbounds()
-		if err == nil {
+	var inboundNodeMap map[int]int
+	inbounds, err := inboundSvc.GetAllInbounds()
+	if err == nil {
+		if len(protocols) > 0 {
 			protocolByInbound = make(map[int]string, len(inbounds))
 			for _, ib := range inbounds {
 				protocolByInbound[ib.Id] = string(ib.Protocol)
+			}
+		}
+		if len(nodeIDs) > 0 {
+			inboundNodeMap = make(map[int]int, len(inbounds))
+			for _, ib := range inbounds {
+				if ib.NodeID != nil {
+					inboundNodeMap[ib.Id] = *ib.NodeID
+				}
 			}
 		}
 	}
@@ -159,6 +170,9 @@ func (s *ClientService) ListPaged(inboundSvc *InboundService, settingSvc *Settin
 			continue
 		}
 		if len(inboundIDs) > 0 && !clientMatchesAnyInbound(c, inboundIDs) {
+			continue
+		}
+		if len(nodeIDs) > 0 && !clientMatchesAnyNode(c, inboundNodeMap, nodeIDs) {
 			continue
 		}
 		if len(buckets) > 0 && !clientMatchesAnyBucket(c, buckets, onlineSet, nowMs, expireDiffMs, trafficDiffBytes) {
@@ -354,6 +368,21 @@ func clientMatchesAnyInbound(c ClientWithAttachments, inboundIds []int) bool {
 	for _, id := range c.InboundIds {
 		if slices.Contains(inboundIds, id) {
 			return true
+		}
+	}
+	return false
+}
+
+func clientMatchesAnyNode(c ClientWithAttachments, inboundNodeMap map[int]int, nodeIDs []int) bool {
+	for _, id := range c.InboundIds {
+		nodeID, ok := inboundNodeMap[id]
+		if !ok {
+			continue
+		}
+		for _, filterNodeID := range nodeIDs {
+			if nodeID == filterNodeID {
+				return true
+			}
 		}
 	}
 	return false
