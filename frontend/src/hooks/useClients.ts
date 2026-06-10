@@ -51,6 +51,7 @@ export interface ClientQueryParams {
   filter?: string;
   protocol?: string;
   inbound?: string;
+  node?: string;
   sort?: string;
   order?: 'ascend' | 'descend';
   expiryFrom?: number;
@@ -112,6 +113,7 @@ function buildQS(p: ClientQueryParams): string {
   if (p.filter) sp.set('filter', p.filter);
   if (p.protocol) sp.set('protocol', p.protocol);
   if (p.inbound) sp.set('inbound', p.inbound);
+  if (p.node) sp.set('node', p.node);
   if (p.sort) sp.set('sort', p.sort);
   if (p.order) sp.set('order', p.order);
   if (p.expiryFrom && p.expiryFrom > 0) sp.set('expiryFrom', String(p.expiryFrom));
@@ -164,6 +166,7 @@ export function useClients() {
         && (prev.filter ?? '') === (next.filter ?? '')
         && (prev.protocol ?? '') === (next.protocol ?? '')
         && (prev.inbound ?? '') === (next.inbound ?? '')
+        && (prev.node ?? '') === (next.node ?? '')
         && (prev.sort ?? '') === (next.sort ?? '')
         && (prev.order ?? '') === (next.order ?? '')
         && (prev.expiryFrom ?? 0) === (next.expiryFrom ?? 0)
